@@ -1,5 +1,6 @@
-import numpy as np
 import cv2 as cv
+import numpy as np
+import mediapipe as mp
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from models.FaceLandmarkModule import FaceLandmarkGenerator
@@ -240,6 +241,9 @@ class BlinkDetectionAndEARPlot:
             break
           
         # Process frame and get EAR
+
+        frame = self.crop_out_face(frame.copy())
+        frame = cv.resize(frame, (512, 512))
         frame, ear = self.process_frame(frame)
         
         if previous_EAR is None:
@@ -286,6 +290,39 @@ class BlinkDetectionAndEARPlot:
     stacked_frame = cv.vconcat([frame, plot_img_resized])
     self._handle_video_output(stacked_frame, fps)
 
+  def crop_out_face(self, annotated_image, show_bbox=False):
+      height, width, _ = annotated_image.shape
+
+      # Initialize Face Detection
+      mp_face_detection = mp.solutions.face_detection
+
+      # For static images:
+      face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
+
+      # Convert the BGR image to RGB before processing.
+      result = face_detection.process(cv.cvtColor(annotated_image, cv.COLOR_BGR2RGB))
+
+      if not result.detections:
+          return annotated_image
+
+      if show_bbox:
+          mp_drawing = mp.solutions.drawing_utils
+          for detection in result.detections:
+              mp_drawing.draw_detection(annotated_image, detection)
+
+          return annotated_image
+
+      im_bbox = result.detections[0].location_data.relative_bounding_box
+      np_annotated_image = np.array(annotated_image)
+      xleft = im_bbox.xmin * width
+      xtop = im_bbox.ymin*height
+      xright = im_bbox.width * width + xleft
+      xbottom = im_bbox.height*height + xtop
+
+      xleft, xtop, xright, xbottom = int(xleft), int(xtop), int(xright), int(xbottom)
+
+      return np_annotated_image[xtop:xbottom, xleft:xright]
+
   def _handle_video_output(self, stacked_frame, fps):
     """Handle video output, including saving and display."""
     # Initialize video writer if needed
@@ -316,7 +353,7 @@ class BlinkDetectionAndEARPlot:
 
 if __name__ == "__main__":
   # Example usage
-  input_video_path = "./01_02__talking_against_wall__YVGY8LOK.mp4"
+  input_video_path = "dataset/manipulated_sequences/Deepfakes/c40/videos/003_000.mp4"
   blink_counter = BlinkDetectionAndEARPlot(
       video_path=input_video_path,
       threshold=0.294,

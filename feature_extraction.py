@@ -1,5 +1,7 @@
 import numpy as np
+
 import cv2 as cv
+import mediapipe as mp
 from models.FaceLandmarkModule import FaceLandmarkGenerator
 import glob
 import os
@@ -67,12 +69,11 @@ class BlinkDetectionAndEARPlot:
         try:
             cap = cv.VideoCapture(self.video_path)
             if not cap.isOpened():
+                return False
                 raise IOError(f"Failed to open video: {self.video_path}")
 
             features_list = self._process_video_frames(cap)
             np_features_list = np.array(features_list)
-            print(np_features_list.shape)
-
             return np_features_list
 
         except Exception as e:
@@ -94,6 +95,9 @@ class BlinkDetectionAndEARPlot:
             if not ret:
                 break
 
+            # frame = self._crop_out_face(frame.copy())
+            # frame = cv.resize(frame, (128, 128))
+
             # Process frame and get EAR
             frame, ear = self.process_frame(frame)
 
@@ -107,13 +111,14 @@ class BlinkDetectionAndEARPlot:
                 blink_indicator = int(ear < self.EAR_THRESHOLD)
                 
                 self._update_blink_detection(ear)
-                print(f"Frame No.: {self.frame_number}, EAR: {ear}, Δ EAR: {delta_EAR}, Blink: {blink_indicator}")
+                # print(f"Frame No.: {self.frame_number}, EAR: {ear}, Δ EAR: {delta_EAR}, Blink: {blink_indicator}")
 
                 video_features.append([ear, delta_EAR, blink_indicator])
 
+                # cv.imshow("Blink Counter", frame)
+                
             if cv.waitKey(1) & 0xFF == ord("p"):
                 break
-        
         return video_features
     
     def _update_blink_detection(self, ear):
@@ -130,18 +135,73 @@ class BlinkDetectionAndEARPlot:
 
         self.frame_number += 1
 
-def get_features_and_save_npy(video_paths, output_dir):
+    def _crop_out_face(self, annotated_image):
+        try:
+            height, width, _ = annotated_image.shape
+            mp_face_detection = mp.solutions.face_detection
+            face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
+            result = face_detection.process(cv.cvtColor(annotated_image, cv.COLOR_BGR2RGB))
 
-    for idx, p in enumerate(video_paths):
-        _, tail = os.path.split(p)
-        name = tail.split(".")[0]
+            if not result.detections:
+                return annotated_image
 
-        output_filename = f"{name}.npy"
-        path = output_dir
-        if idx < 40:
-            blink_counter = BlinkDetectionAndEARPlot(p, 0.294, 4)
-            video_features = blink_counter.process_video()
-            print("video_features: ", video_features.shape, len(video_features))
+            im_bbox = result.detections[0].location_data.relative_bounding_box
+            np_annotated_image = np.array(annotated_image)
+            xleft = im_bbox.xmin * width
+            xtop = im_bbox.ymin*height
+            xright = im_bbox.width * width + xleft
+            xbottom = im_bbox.height*height + xtop
+
+            xleft, xtop, xright, xbottom = int(xleft), int(xtop), int(xright), int(xbottom)
+
+            return np_annotated_image[xtop:xbottom, xleft:xright]
+        except Exception as e:
+            print(f"Error in cropping image: {e}")
+
+
+def faces_count(path):
+    try:
+        cap = cv.VideoCapture(path)
+        if not cap.isOpened():
+            raise IOError(f"Failed to open video: {path}")
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            annotated_image = frame.copy()
+
+            # Initialize Face Detection
+            mp_face_detection = mp.solutions.face_detection
+
+            # For static images:
+            face_detection = mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.5)
+
+            # Convert the BGR image to RGB before processing.
+            result = face_detection.process(cv.cvtColor(annotated_image, cv.COLOR_BGR2RGB))
+
+            return len(result.detections)
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def get_and_save_features(p, path, output_filename, idx):
+    detected_faces = faces_count(p)
+    if detected_faces != 1: return
+    else:
+        blink_counter = BlinkDetectionAndEARPlot(p, 0.294, 4)
+        video_features = blink_counter.process_video()
+        if video_features.any():
+            print("--------------")
+            print("--------------")
+            print("--------------")
+            print("--------------")
+            print(f"{idx} Video Processed | Features: ", video_features.shape, len(video_features))
+            print("--------------")
+            print("--------------")
+            print("--------------")
+            print("--------------")
 
             if not(os.path.exists(f"{path}{output_filename}")):
                 os.makedirs(path, exist_ok=True)
@@ -149,22 +209,41 @@ def get_features_and_save_npy(video_paths, output_dir):
                 np.save(os.path.join(path, output_filename), ds)
 
             np.save(f"{path}/{output_filename}", video_features)
-            # return video_features, f"{path}/{output_filename}"
+        else:
+            print("Video could not open: ", p)
+        # return video_features, f"{path}/{output_filename}"
+
+def get_features_and_save_npy(video_paths, output_dir):
+    for idx, p in enumerate(video_paths):
+        _, tail = os.path.split(p)
+        name = tail.split(".")[0]
+
+        np_path = output_dir + f"{name}.npy"
+        file_already_exist = os.path.isfile(np_path)
+        output_filename = f"{name}.npy"
+        path = output_dir
+        
+        # if idx < 20:
+        if not file_already_exist:
+            get_and_save_features(p, path, output_filename, idx)
+        else:
+            print(f"{idx} => File missed: ", np_path)
+
 
 if __name__ == "__main__":
     # Example usage
-    fake_dir = "/Users/mughalfrazk/Study/SHU/Dissertation/code/mediapipe-eye-detection/dataset/manipulated_sequences"
-    orig_dir = "/Users/mughalfrazk/Study/SHU/Dissertation/code/mediapipe-eye-detection/dataset/original_sequences"
+    fake_dir = "dataset/manipulated_sequences"
+    orig_dir = "dataset/original_sequences"
     
     fake_paths = glob.glob(fake_dir + "/*/*/*/*.mp4")
     orig_paths = glob.glob(orig_dir + "/*/*/*/*.mp4")
-    print(len(fake_dir))
-    print(len(orig_dir))
+    print("fake_paths: ", len(fake_paths))
+    print("orig_dir: ", len(orig_paths))
 
-    input_video_path = "/Users/mughalfrazk/Study/SHU/Dissertation/code/mediapipe-eye-detection/dataset/manipulated_sequences/DeepFakeDetection/c40/videos/28_08__secret_conversation__5DCAESDA.mp4"
+    input_video_path = "dataset/manipulated_sequences/DeepFakeDetection/c40/videos/28_08__secret_conversation__5DCAESDA.mp4"
 
     all_video_features = []
     all_video_targets = []
 
-    get_features_and_save_npy(fake_paths, f"./out/")
-    get_features_and_save_npy(orig_paths, f"./out/")
+    get_features_and_save_npy(fake_paths, f"./out/0/")
+    # get_features_and_save_npy(orig_paths, f"./out/1/")
