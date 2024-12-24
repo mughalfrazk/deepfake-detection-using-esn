@@ -111,7 +111,7 @@ class BlinkDetectionAndEARPlot:
                 blink_indicator = int(ear < self.EAR_THRESHOLD)
                 
                 self._update_blink_detection(ear)
-                # print(f"Frame No.: {self.frame_number}, EAR: {ear}, Δ EAR: {delta_EAR}, Blink: {blink_indicator}")
+                print(f"Frame No.: {self.frame_number}, EAR: {ear}, Δ EAR: {delta_EAR}, Blink: {blink_indicator}")
 
                 video_features.append([ear, delta_EAR, blink_indicator])
 
@@ -192,25 +192,23 @@ def get_and_save_features(p, path, output_filename, idx):
     else:
         blink_counter = BlinkDetectionAndEARPlot(p, 0.294, 4)
         video_features = blink_counter.process_video()
-        if video_features.any():
-            print("--------------")
-            print("--------------")
-            print("--------------")
-            print("--------------")
-            print(f"{idx} Video Processed | Features: ", video_features.shape, len(video_features))
-            print("--------------")
-            print("--------------")
-            print("--------------")
-            print("--------------")
+        print("--------------")
+        print("--------------")
+        print("--------------")
+        print("--------------")
+        print(f"{idx} Video Processed | Features: ", video_features.shape, len(video_features))
+        print("--------------")
+        print("--------------")
+        print("--------------")
+        print("--------------")
 
-            if not(os.path.exists(f"{path}{output_filename}")):
-                os.makedirs(path, exist_ok=True)
-                ds = {"ORE_MAX_GIORNATA": 5}
-                np.save(os.path.join(path, output_filename), ds)
+        if not(os.path.exists(f"{path}{output_filename}")):
+            os.makedirs(path, exist_ok=True)
+            ds = {"ORE_MAX_GIORNATA": 5}
+            np.save(os.path.join(path, output_filename), ds)
 
-            np.save(f"{path}/{output_filename}", video_features)
-        else:
-            print("Video could not open: ", p)
+        np.save(f"{path}/{output_filename}", video_features)
+
         # return video_features, f"{path}/{output_filename}"
 
 def get_features_and_save_npy(video_paths, output_dir):
