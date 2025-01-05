@@ -3,7 +3,7 @@ import cv2 as cv
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from models.FaceLandmarkModule import FaceLandmarkGenerator
-from utils import DrawingUtils
+from utils.drawing import DrawingUtils
 import os
 
 class BlinkDetectionAndEARPlot:

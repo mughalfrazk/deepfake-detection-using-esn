@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 as cv
 from models.FaceLandmarkModule import FaceLandmarkGenerator
-from utils import DrawingUtils
+from utils.drawing import DrawingUtils
 import os
 
 class BlinkDetection:
