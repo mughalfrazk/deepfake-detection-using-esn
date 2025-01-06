@@ -1,12 +1,19 @@
-import numpy as np
+import os
+import sys
+from pathlib import Path
+
+root_path = Path(__file__).resolve().parents[1]
+sys.path.append(str(root_path))
+
 import cv2 as cv
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from models.FaceLandmarkModule import FaceLandmarkGenerator
 from utils.drawing import DrawingUtils
-import os
 
-class BlinkDetectionAndEARPlot:
+
+class DetectBlinkingAndPlot:
   # Facial landmark indices for eyes
   RIGHT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
   LEFT_EYE = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
@@ -327,14 +334,13 @@ class BlinkDetectionAndEARPlot:
       return img_rgb
 
 if __name__ == "__main__":
-  # Example usage
-  input_video_path = "dataset/original_sequences/actors/c40/videos/06__hugging_happy.mp4"
-  blink_counter = BlinkDetectionAndEARPlot(
-      video_path=input_video_path,
+  video_path = "./sample_video.mp4"
+  detect_blinking = DetectBlinkingAndPlot(
+      video_path=video_path,
       threshold=0.294,
       consec_frames=3,
       save_video=True,
       output_filename="blinking_1_output.mp4"
   )
-  blink_counter.process_video()
+  detect_blinking.process_video()
   
