@@ -353,7 +353,7 @@ class BlinkDetectionAndEARPlot:
 
 if __name__ == "__main__":
   # Example usage
-  input_video_path = "dataset/manipulated_sequences/Deepfakes/c40/videos/003_000.mp4"
+  input_video_path = "./sample_video.mp4"
   blink_counter = BlinkDetectionAndEARPlot(
       video_path=input_video_path,
       threshold=0.294,

@@ -1,10 +1,5 @@
 import numpy as np
-import cv2 as cv
-import matplotlib.pyplot as plt
-from models.FaceLandmarkModule import FaceLandmarkGenerator
 import glob
-import seaborn as sns
-import os
 
 def pad_to_max_length(array, max_length, pad_value = 0):
     if array.ndim == 2:

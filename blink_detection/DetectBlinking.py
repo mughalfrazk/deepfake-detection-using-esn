@@ -10,11 +10,12 @@ from models.FaceLandmarkModule import FaceLandmarkGenerator
 from utils.drawing import DrawingUtils
 
 class DetectBlinking:
-    def __init__(self, video_path, ear_threshold, consec_frames):
+    def __init__(self, video_path, ear_threshold, consec_frames, return_features=False):
         self.generator = FaceLandmarkGenerator()
         self.video_path = video_path
         self.ear_threshold = ear_threshold
         self.consec_frames = consec_frames
+        self.return_features = return_features
         self.blink_counter = 0
         self.frame_counter = 0
 
@@ -64,6 +65,41 @@ class DetectBlinking:
         for loc in eye_landmarks:
             cv.circle(frame, (landmarks[loc]), 2, color, cv.FILLED)
 
+    def process_frame(self, frame):
+        """
+        Process a single frame to detect and analyze eyes.
+
+        Returns:
+            tuple: Processed frame and EAR value
+        """
+        frame, face_landmarks = self.generator.create_face_mesh(frame, draw=False)
+
+        if not face_landmarks:
+            return frame, None
+
+        # Calculate EAR
+        right_ear = self.eye_aspect_ratio(self.RIGHT_EYE_EAR, face_landmarks)
+        left_ear = self.eye_aspect_ratio(self.LEFT_EYE_EAR, face_landmarks)
+        ear = (right_ear + left_ear) / 2.0
+
+        return frame, ear, face_landmarks
+
+    def calculate_features(self, ear, previous_EAR, video_features):
+
+        if ear is not None:
+            if previous_EAR is None:
+                delta_EAR = 0
+            else:
+                delta_EAR = ear - previous_EAR
+
+            previous_EAR = ear
+            blink_indicator = int(ear < self.ear_threshold)
+            print(f"EAR: {ear}, Δ EAR: {delta_EAR}, Blink: {blink_indicator}")
+            video_features.append([ear, delta_EAR, blink_indicator])
+
+        return video_features, previous_EAR
+
+
     def process_video(self):
         try:
             cap = cv.VideoCapture(self.video_path)
@@ -71,26 +107,27 @@ class DetectBlinking:
                 print(f"Failed to open video: {self.video_path}")
                 raise IOError("Error: couldn't open the video!")
 
-            landmark_generator = FaceLandmarkGenerator()
             _, _, fps = (int(cap.get(x)) for x in (cv.CAP_PROP_FRAME_WIDTH, cv.CAP_PROP_FRAME_HEIGHT, cv.CAP_PROP_FPS))
 
+            video_features = []
+            previous_EAR = None
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
                     break
 
-                frame, landmarks = landmark_generator.create_face_mesh(frame, draw=False)
+                frame, ear, face_landmarks = self.process_frame(frame)
 
-                if len(landmarks) > 0:
-                    right_ear = self.eye_aspect_ratio(self.RIGHT_EYE_EAR, landmarks)
-                    left_ear = self.eye_aspect_ratio(self.LEFT_EYE_EAR, landmarks)
-                    ear = (right_ear + left_ear) / 2.0
-
+                if self.return_features:
+                    if ear is not None:
+                        video_features, prev = self.calculate_features(ear, previous_EAR, video_features)
+                        previous_EAR = prev
+                else:
                     self.update_blink_count(ear)
                     color = self.set_colors(ear)
 
-                    self.draw_eye_landmarks(frame, landmarks, self.RIGHT_EYE, color)
-                    self.draw_eye_landmarks(frame, landmarks, self.LEFT_EYE, color)
+                    self.draw_eye_landmarks(frame, face_landmarks, self.RIGHT_EYE, color)
+                    self.draw_eye_landmarks(frame, face_landmarks, self.LEFT_EYE, color)
                     DrawingUtils.draw_text_with_bg(
                         frame,
                         f"Blinks: {self.blink_counter}",
@@ -103,12 +140,13 @@ class DetectBlinking:
 
                     resized_frame = cv.resize(frame, (1280, 720))
                     cv.imshow("Blink Counter", resized_frame)
-
-                if cv.waitKey(int(1000 / fps)) & 0xFF == ord("p"):
-                    break
+                    if cv.waitKey(int(1000 / fps)) & 0xFF == ord("p"):
+                        break
 
             cap.release()
             cv.destroyAllWindows()
+
+            return np.array(video_features)
 
         except Exception as e:
             print(f"An error occured: {e}")
@@ -117,5 +155,6 @@ class DetectBlinking:
 if __name__ == "__main__":
     video_path = "./sample_video.mp4"
 
-    detect_blinking = DetectBlinking(video_path=video_path, ear_threshold=0.3, consec_frames=3)
-    detect_blinking.process_video()
+    detect_blinking = DetectBlinking(video_path=video_path, ear_threshold=0.3, consec_frames=3, return_features=True)
+    video_features = detect_blinking.process_video()
+    print("Video Features: ", len(video_features), video_features.shape)
