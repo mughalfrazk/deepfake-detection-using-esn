@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 
-
 class EchoStateNetwork:
     def __init__(self, reservoir_size, input_dim, spectral_radius=0.9, device="cpu"):
         self.device = torch.device(device)

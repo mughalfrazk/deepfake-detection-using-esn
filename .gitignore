@@ -1,7 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 /*/__pycache__/
-/models/__pycache__
 *.py[cod]
 *$py.class
 
@@ -105,8 +104,14 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+.DS_Store
+/*/.DS_Store
+*/.DS_Store
+
 /dataset
 /data
 .venv
 /dataset.zip
 /out/*/
+/out/*/*
+/script.py

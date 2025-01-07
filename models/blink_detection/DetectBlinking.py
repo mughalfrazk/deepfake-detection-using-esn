@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-root_path = Path(__file__).resolve().parents[1]
+root_path = Path(__file__).resolve().parents[2]
 sys.path.append(str(root_path))
 
 import cv2 as cv
@@ -155,6 +155,6 @@ class DetectBlinking:
 if __name__ == "__main__":
     video_path = "./sample_video.mp4"
 
-    detect_blinking = DetectBlinking(video_path=video_path, ear_threshold=0.3, consec_frames=3, return_features=True)
+    detect_blinking = DetectBlinking(video_path=video_path, ear_threshold=0.3, consec_frames=3)
     video_features = detect_blinking.process_video()
     print("Video Features: ", len(video_features), video_features.shape)
