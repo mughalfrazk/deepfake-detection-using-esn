@@ -105,13 +105,15 @@ venv.bak/
 .mypy_cache/
 
 .DS_Store
-/*/.DS_Store
 */.DS_Store
+/*/.DS_Store
+/*/*/.DS_Store
 
 /dataset
 /data
 .venv
 /dataset.zip
 /out/*/
-/out/*/*
+/out/*/*.npz
+/out/*/*.npy
 /script.py
