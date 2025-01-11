@@ -1,53 +1,15 @@
+import sys
+from pathlib import Path
+
+root_path = Path(__file__).resolve().parents[1]
+sys.path.append(str(root_path))
+
 import cv2 as cv
-import mediapipe as mp
 import numpy as np
-
-
-def crop_out_face(cv2_image_path, show_bbox=False):
-    annotated_image = cv2_image_path.copy()
-    height, width, _ = annotated_image.shape
-
-    # Initialize Face Detection
-    mp_face_detection = mp.solutions.face_detection
-
-    # For static images:
-    face_detection = mp_face_detection.FaceDetection(
-        model_selection=1, min_detection_confidence=0.5
-    )
-
-    # Convert the BGR image to RGB before processing.
-    result = face_detection.process(cv.cvtColor(annotated_image, cv.COLOR_BGR2RGB))
-
-    if not result.detections:
-        return cv2_image_path
-
-    if show_bbox:
-        mp_drawing = mp.solutions.drawing_utils
-        for detection in result.detections:
-            mp_drawing.draw_detection(annotated_image, detection)
-
-        return annotated_image
-
-    im_bbox = result.detections[0].location_data.relative_bounding_box
-    np_annotated_image = np.array(annotated_image)
-    xleft = im_bbox.xmin * width
-    xtop = im_bbox.ymin * height
-    xright = im_bbox.width * width + xleft
-    xbottom = im_bbox.height * height + xtop
-
-    xleft, xtop, xright, xbottom = int(xleft), int(xtop), int(xright), int(xbottom)
-
-    return np_annotated_image[xtop:xbottom, xleft:xright]
-
-
-# v
-# v
-# v
-# v
-
+import mediapipe as mp
 
 class FaceDetectionGenerator:
-    def __init__(self, model_selection=0.5, min_detection_confidence=0.5):
+    def __init__(self, model_selection=1, min_detection_confidence=0.5):
         try:
             self.results = None
             self.model_selection = model_selection
@@ -62,7 +24,7 @@ class FaceDetectionGenerator:
         except Exception as e:
             raise RuntimeError(f"Failed to initialize FaceMeshGenerator: {str(e)}")
 
-    def crop_detected_face(self, frame):
+    def detect_and_crop_face(self, frame, skip_multiple_faces=False, logs=False):
         if frame is None:
             raise ValueError("Input frame cannot be None")
 
@@ -71,6 +33,16 @@ class FaceDetectionGenerator:
         try:
             frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
             self.results = self.face_detection.process(frame_rgb)
+
+            if self.results.detections is None:
+                if logs is True:
+                    print("No face detected. Skipping frame...")
+                return None
+            
+            if len(self.results.detections) > 1 and skip_multiple_faces:
+                if logs is True:
+                    print("Multiple faces detected. Skipping frame...")
+                return None
 
             im_bbox = self.results.detections[0].location_data.relative_bounding_box
             np_annotated_image = np.array(frame)
@@ -86,13 +58,12 @@ class FaceDetectionGenerator:
                 int(xbottom),
             )
 
-            print(xtop, xbottom, xleft, xright)
             return np_annotated_image[xtop:xbottom, xleft:xright]
         except Exception as e:
             raise RuntimeError(f"Error processing frame: {str(e)}")
 
 
-def detect_and_crop_video(video_path, resizing_factor, save_video=False, filename=None):
+def detect_face(video_path, resizing_factor):
     try:
         cap = cv.VideoCapture(0 if video_path == 0 else video_path)
         if not cap.isOpened():
@@ -108,24 +79,25 @@ def detect_and_crop_video(video_path, resizing_factor, save_video=False, filenam
             )
         )
 
-        # detector_generator = FaceDetectionGenerator()
+        detector_generator = FaceDetectionGenerator()
 
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
 
-            # cropped_frame = detector_generator.crop_detected_face(frame)
+            frame = detector_generator.detect_and_crop_face(frame)
 
-            # if video_path == 0:
-            #     frame = cv.flip(frame, 1)
+            if video_path == 0:
+                frame = cv.flip(frame, 1)
 
-            # if resizing_factor <= 0:
-            #     raise ValueError("Resizing factor must be positive")
+            if resizing_factor <= 0:
+                raise ValueError("Resizing factor must be positive")
 
-            # resized_frame = cv.resize(
+            # frame = cv.resize(
             #     frame, (int(f_w * resizing_factor), int(f_h * resizing_factor))
             # )
+            frame = cv.resize(frame, (500, 500))
             cv.imshow("Video", frame)
 
             if cv.waitKey(1) & 0xFF == ord("p"):
@@ -141,6 +113,6 @@ def detect_and_crop_video(video_path, resizing_factor, save_video=False, filenam
 
 
 if __name__ == "__main__":
-    video_path = 0
+    video_path = "./sample_video.mp4"
     resizing_factor = 1 if video_path == 0 else 0.5
-    detect_and_crop_video("/Users/mughalfrazk/Study/SHU/Dissertation/code/mediapipe-eye-detection/models/FaceLandmarkModule.py", resizing_factor)
+    detect_face(video_path, resizing_factor)
