@@ -46,11 +46,15 @@ This project is part of my MSc dissertation at Sheffield Hallam University, focu
 
 The project combines advanced AI techniques with biometric analysis using eye-blinking patterns to propose a novel, efficient approach to deepfake detection.
 
+![Real time EAR Detection](https://github.com/mughalfrazk/deepfake-detection-using-esn/blob/main/assets/realtime-ear.gif?raw=true)
+
 ## Key Features  
 - **Eye-Blinking Analysis**: Utilizes temporal patterns of eye blinks as a key biometric feature.  
 - **Deep Learning Integration**: Extracts high-dimensional features using **ResNet50** and reduces them using **PCA**.  
 - **Reservoir Computing**: Implements Echo State Networks (ESNs) for efficient and scalable temporal sequence modeling.  
 - **Dataset**: Built and trained on the **FaceForensics++** dataset.  
+<br />
+![Feature Extraction](https://github.com/mughalfrazk/deepfake-detection-using-esn/blob/main/assets/feature-extraction.png?raw=true)
 
 ## Methodology  
 1. **Preprocessing**:  
