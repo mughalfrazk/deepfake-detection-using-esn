@@ -54,6 +54,7 @@ The project combines advanced AI techniques with biometric analysis using eye-bl
 - **Reservoir Computing**: Implements Echo State Networks (ESNs) for efficient and scalable temporal sequence modeling.  
 - **Dataset**: Built and trained on the **FaceForensics++** dataset.  
 <br />
+
 ![Feature Extraction](https://github.com/mughalfrazk/deepfake-detection-using-esn/blob/main/assets/feature-extraction.png?raw=true)
 
 ## Methodology  
