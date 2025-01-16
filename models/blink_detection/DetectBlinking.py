@@ -224,10 +224,10 @@ if __name__ == "__main__":
         video_path=video_path,
         ear_threshold=0.3,
         consec_frames=3,
-        crop_face=True,
-        return_features=True,
-        process=True,
-        logs=True
+        crop_face=False,
+        return_features=False,
+        process=False,
+        logs=False
     )
     video_features, ear_features = detect_blinking.process_video()
     video_features = np.array(video_features)
